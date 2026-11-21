@@ -34,6 +34,8 @@ namespace Whisparr.Api.V3.Series
         public string RemotePoster { get; set; }
         public List<SeasonResource> Seasons { get; set; }
         public int Year { get; set; }
+        public string Certification { get; set; }
+        public Ratings Ratings { get; set; }
 
         // View & Edit
         public string Path { get; set; }
@@ -56,6 +58,7 @@ namespace Whisparr.Api.V3.Series
         public HashSet<int> Tags { get; set; }
         public HashSet<int> MonitoredTagIds { get; set; }
         public DateTime Added { get; set; }
+        public AddSeriesOptions AddOptions { get; set; }
 
         public SeriesStatisticsResource Statistics { get; set; }
 
