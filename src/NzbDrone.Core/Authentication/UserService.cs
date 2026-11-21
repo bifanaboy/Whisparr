@@ -164,6 +164,17 @@ namespace NzbDrone.Core.Authentication
 
         public void Handle(ApplicationStartedEvent message)
         {
+            var envUsername = Environment.GetEnvironmentVariable("whisparr_username") ??
+                              Environment.GetEnvironmentVariable("WHISPARR_USERNAME");
+            var envPassword = Environment.GetEnvironmentVariable("whisparr_password") ??
+                              Environment.GetEnvironmentVariable("WHISPARR_PASSWORD");
+
+            if (!string.IsNullOrWhiteSpace(envUsername) && !string.IsNullOrWhiteSpace(envPassword))
+            {
+                Upsert(envUsername, envPassword);
+                return;
+            }
+
             if (_repo.All().Any())
             {
                 return;
