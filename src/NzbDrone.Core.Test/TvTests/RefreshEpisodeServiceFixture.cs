@@ -7,6 +7,7 @@ using Moq;
 using NUnit.Framework;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Core.MetadataSource.SkyHook;
+using NzbDrone.Core.Tags;
 using NzbDrone.Core.Test.Framework;
 using NzbDrone.Core.Tv;
 using NzbDrone.Test.Common;
@@ -60,6 +61,12 @@ namespace NzbDrone.Core.Test.TvTests
 
             Mocker.GetMock<IEpisodeService>().Setup(c => c.DeleteMany(It.IsAny<List<Episode>>()))
                 .Callback<List<Episode>>(e => _deletedEpisodes = e);
+
+            Mocker.GetMock<ITagService>().Setup(c => c.All())
+                .Returns(new List<Tag>());
+
+            Mocker.GetMock<ITagService>().Setup(c => c.Add(It.IsAny<Tag>()))
+                .Returns<Tag>(t => new Tag { Id = 1, Label = t.Label });
         }
 
         [Test]
@@ -75,6 +82,33 @@ namespace NzbDrone.Core.Test.TvTests
             _deletedEpisodes.Should().BeEmpty();
 
             ExceptionVerification.ExpectedWarns(1);
+        }
+
+        [Test]
+        public void should_ingest_tags_from_remote_episode_genres()
+        {
+            var remoteEpisode = new Episode
+            {
+                Title = "Scene With Tags",
+                SeasonNumber = 2024,
+                AirDate = "2024-01-01",
+                TvdbId = 12345,
+                Genres = new List<string> { "Blowjob", "Brunette" }
+            };
+
+            Mocker.GetMock<ITagService>().Setup(c => c.Add(It.Is<Tag>(t => t.Label == "blowjob")))
+                  .Returns(new Tag { Id = 10, Label = "blowjob" });
+            Mocker.GetMock<ITagService>().Setup(c => c.Add(It.Is<Tag>(t => t.Label == "brunette")))
+                  .Returns(new Tag { Id = 20, Label = "brunette" });
+
+            Mocker.GetMock<IEpisodeService>().Setup(c => c.GetEpisodeBySeries(It.IsAny<int>()))
+                  .Returns(new List<Episode>());
+
+            Subject.RefreshEpisodeInfo(new Series { Id = 1 }, new List<Episode> { remoteEpisode });
+
+            _insertedEpisodes.Should().HaveCount(1);
+            _insertedEpisodes.First().Tags.Should().BeEquivalentTo(new HashSet<int> { 10, 20 });
+            Mocker.GetMock<ITagService>().Verify(c => c.CleanupOrphanTags(), Times.Once());
         }
 
         [Test]

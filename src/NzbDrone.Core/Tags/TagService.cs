@@ -24,6 +24,7 @@ namespace NzbDrone.Core.Tags
         Tag Add(Tag tag);
         Tag Update(Tag tag);
         void Delete(int tagId);
+        void CleanupOrphanTags();
     }
 
     public class TagService : ITagService
@@ -35,6 +36,7 @@ namespace NzbDrone.Core.Tags
         private readonly INotificationFactory _notificationFactory;
         private readonly IReleaseProfileService _releaseProfileService;
         private readonly ISeriesService _seriesService;
+        private readonly IEpisodeService _episodeService;
         private readonly IIndexerFactory _indexerService;
         private readonly IAutoTaggingService _autoTaggingService;
         private readonly IDownloadClientFactory _downloadClientFactory;
@@ -46,6 +48,7 @@ namespace NzbDrone.Core.Tags
                           INotificationFactory notificationFactory,
                           IReleaseProfileService releaseProfileService,
                           ISeriesService seriesService,
+                          IEpisodeService episodeService,
                           IIndexerFactory indexerService,
                           IAutoTaggingService autoTaggingService,
                           IDownloadClientFactory downloadClientFactory)
@@ -57,6 +60,7 @@ namespace NzbDrone.Core.Tags
             _notificationFactory = notificationFactory;
             _releaseProfileService = releaseProfileService;
             _seriesService = seriesService;
+            _episodeService = episodeService;
             _indexerService = indexerService;
             _autoTaggingService = autoTaggingService;
             _downloadClientFactory = downloadClientFactory;
@@ -93,6 +97,7 @@ namespace NzbDrone.Core.Tags
             var releaseProfiles = _releaseProfileService.AllForTag(tagId);
             var excludedReleaseProfiles = _releaseProfileService.AllExcludedForTag(tagId);
             var series = _seriesService.AllForTag(tagId);
+            var episodes = _episodeService.GetAllEpisodeTags();
             var indexers = _indexerService.AllForTag(tagId);
             var autoTags = _autoTaggingService.AllForTag(tagId);
             var downloadClients = _downloadClientFactory.AllForTag(tagId);
@@ -107,6 +112,7 @@ namespace NzbDrone.Core.Tags
                 RestrictionIds = releaseProfiles.Select(c => c.Id).ToList(),
                 ExcludedReleaseProfileIds = excludedReleaseProfiles.Select(c => c.Id).ToList(),
                 SeriesIds = series.Select(c => c.Id).ToList(),
+                EpisodeIds = episodes.Where(c => c.Value.Contains(tagId)).Select(c => c.Key).ToList(),
                 IndexerIds = indexers.Select(c => c.Id).ToList(),
                 AutoTagIds = autoTags.Select(c => c.Id).ToList(),
                 DownloadClientIds = downloadClients.Select(c => c.Id).ToList()
@@ -122,9 +128,13 @@ namespace NzbDrone.Core.Tags
             var releaseProfiles = _releaseProfileService.All();
             var excludedReleaseProfiles = _releaseProfileService.All();
             var series = _seriesService.GetAllSeriesTags();
+            var episodes = _episodeService.GetAllEpisodeTags();
             var indexers = _indexerService.All();
             var autotags = _autoTaggingService.All();
             var downloadClients = _downloadClientFactory.All();
+
+            var episodeLookup = episodes.SelectMany(e => e.Value.Select(t => new { TagId = t, EpisodeId = e.Key }))
+                                        .ToLookup(x => x.TagId, x => x.EpisodeId);
 
             var details = new List<TagDetails>();
 
@@ -140,6 +150,7 @@ namespace NzbDrone.Core.Tags
                         RestrictionIds = releaseProfiles.Where(c => c.Tags.Contains(tag.Id)).Select(c => c.Id).ToList(),
                         ExcludedReleaseProfileIds = excludedReleaseProfiles.Where(c => c.ExcludedTags.Contains(tag.Id)).Select(c => c.Id).ToList(),
                         SeriesIds = series.Where(c => c.Value.Contains(tag.Id)).Select(c => c.Key).ToList(),
+                        EpisodeIds = episodeLookup[tag.Id].ToList(),
                         IndexerIds = indexers.Where(c => c.Tags.Contains(tag.Id)).Select(c => c.Id).ToList(),
                         AutoTagIds = autotags.Where(c => c.Tags.Contains(tag.Id)).Select(c => c.Id).ToList(),
                         DownloadClientIds = downloadClients.Where(c => c.Tags.Contains(tag.Id)).Select(c => c.Id).ToList(),
@@ -156,14 +167,14 @@ namespace NzbDrone.Core.Tags
 
         public Tag Add(Tag tag)
         {
+            tag.Label = tag.Label.Trim().ToLowerInvariant();
+
             var existingTag = _repo.FindByLabel(tag.Label);
 
             if (existingTag != null)
             {
                 return existingTag;
             }
-
-            tag.Label = tag.Label.ToLowerInvariant();
 
             _repo.Insert(tag);
             _eventAggregator.PublishEvent(new TagsUpdatedEvent());
@@ -173,7 +184,7 @@ namespace NzbDrone.Core.Tags
 
         public Tag Update(Tag tag)
         {
-            tag.Label = tag.Label.ToLowerInvariant();
+            tag.Label = tag.Label.Trim().ToLowerInvariant();
 
             _repo.Update(tag);
             _eventAggregator.PublishEvent(new TagsUpdatedEvent());
@@ -191,6 +202,74 @@ namespace NzbDrone.Core.Tags
 
             _repo.Delete(tagId);
             _eventAggregator.PublishEvent(new TagsUpdatedEvent());
+        }
+
+        public void CleanupOrphanTags()
+        {
+            var usedTagIds = new HashSet<int>();
+
+            foreach (var tags in _seriesService.GetAllSeriesTags().Values)
+            {
+                usedTagIds.UnionWith(tags);
+            }
+
+            foreach (var tags in _episodeService.GetAllEpisodeTags().Values)
+            {
+                usedTagIds.UnionWith(tags);
+            }
+
+            foreach (var p in _delayProfileService.All())
+            {
+                usedTagIds.UnionWith(p.Tags);
+            }
+
+            foreach (var l in _importListFactory.All())
+            {
+                usedTagIds.UnionWith(l.Tags);
+            }
+
+            foreach (var n in _notificationFactory.All())
+            {
+                usedTagIds.UnionWith(n.Tags);
+            }
+
+            foreach (var r in _releaseProfileService.All())
+            {
+                usedTagIds.UnionWith(r.Tags);
+                usedTagIds.UnionWith(r.ExcludedTags);
+            }
+
+            foreach (var i in _indexerService.All())
+            {
+                usedTagIds.UnionWith(i.Tags);
+            }
+
+            foreach (var a in _autoTaggingService.All())
+            {
+                usedTagIds.UnionWith(a.Tags);
+            }
+
+            foreach (var d in _downloadClientFactory.All())
+            {
+                usedTagIds.UnionWith(d.Tags);
+            }
+
+            var allTags = _repo.All();
+            var anyDeleted = false;
+
+            foreach (var tag in allTags)
+            {
+                if (!usedTagIds.Contains(tag.Id))
+                {
+                    _repo.Delete(tag.Id);
+                    anyDeleted = true;
+                }
+            }
+
+            if (anyDeleted)
+            {
+                _eventAggregator.PublishEvent(new TagsUpdatedEvent());
+            }
         }
     }
 }

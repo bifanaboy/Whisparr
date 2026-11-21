@@ -141,5 +141,25 @@ namespace NzbDrone.Core.Test.DecisionEngineTests
 
             Subject.IsSatisfiedBy(_remoteEpisode, new()).Accepted.Should().Be(expected);
         }
+
+        [Test]
+        public void should_use_episode_tags_when_evaluating_restrictions()
+        {
+            _remoteEpisode.Series.Tags = new HashSet<int> { 1 };
+            _remoteEpisode.Episodes = new List<Episode>
+            {
+                new Episode { Tags = new HashSet<int> { 2 } }
+            };
+
+            HashSet<int> capturedTags = null;
+            Mocker.GetMock<IReleaseProfileService>()
+                  .Setup(s => s.EnabledForTags(It.IsAny<HashSet<int>>(), It.IsAny<int>()))
+                  .Callback<HashSet<int>, int>((tags, id) => capturedTags = tags)
+                  .Returns(new List<ReleaseProfile>());
+
+            Subject.IsSatisfiedBy(_remoteEpisode, new());
+
+            capturedTags.Should().BeEquivalentTo(new HashSet<int> { 1, 2 });
+        }
     }
 }

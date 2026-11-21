@@ -22,7 +22,7 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
 
         public virtual DownloadSpecDecision IsSatisfiedBy(RemoteEpisode subject, ReleaseDecisionInformation information)
         {
-            var delayProfile = _delayProfileService.BestForTags(subject.Series.Tags);
+            var delayProfile = _delayProfileService.BestForTags(subject.GetAllTags());
 
             if (subject.Release.DownloadProtocol == DownloadProtocol.Usenet && !delayProfile.EnableUsenet)
             {

@@ -23,7 +23,7 @@ namespace NzbDrone.Core.DecisionEngine.Specifications.RssSync
 
         public virtual DownloadSpecDecision IsSatisfiedBy(RemoteEpisode subject, ReleaseDecisionInformation information)
         {
-            if (subject.Release == null || subject.Series?.Tags == null || subject.Release.IndexerId == 0)
+            if (subject.Release == null || subject.Release.IndexerId == 0)
             {
                 return DownloadSpecDecision.Accept();
             }
@@ -39,12 +39,13 @@ namespace NzbDrone.Core.DecisionEngine.Specifications.RssSync
                 return DownloadSpecDecision.Accept();
             }
 
-            // If indexer has tags, check that at least one of them is present on the series
+            // If indexer has tags, check that at least one of them is present on the series or episode
             var indexerTags = indexer.Tags;
+            var allTags = subject.GetAllTags();
 
-            if (indexerTags.Any() && indexerTags.Intersect(subject.Series.Tags).Empty())
+            if (indexerTags.Any() && indexerTags.Intersect(allTags).Empty())
             {
-                _logger.Debug("Indexer {0} has tags. None of these are present on series {1}. Rejecting", subject.Release.Indexer, subject.Series);
+                _logger.Debug("Indexer {0} has tags. None of these are present on series {1} or its episodes. Rejecting", subject.Release.Indexer, subject.Series);
 
                 return DownloadSpecDecision.Reject(DownloadRejectionReason.NoMatchingTag, "Series tags do not match any of the indexer tags");
             }

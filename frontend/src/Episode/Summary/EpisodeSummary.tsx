@@ -16,6 +16,8 @@ import {
   deleteEpisodeFile,
   fetchEpisodeFile,
 } from 'Store/Actions/episodeFileActions';
+import useTags from 'Tags/useTags';
+import sortByProp from 'Utilities/Array/sortByProp';
 import translate from 'Utilities/String/translate';
 import EpisodeAiring from './EpisodeAiring';
 import EpisodeFileRow from './EpisodeFileRow';
@@ -83,10 +85,18 @@ function EpisodeSummary(props: EpisodeSummaryProps) {
 
   const { qualityProfileId, network } = useSeries(seriesId) as Series;
 
-  const { releaseDate, overview } = useEpisode(
+  const { releaseDate, overview, tags: episodeTags = [] } = useEpisode(
     episodeId,
     episodeEntity
   ) as Episode;
+
+  const tagList = useTags();
+
+  const sceneTags = (episodeTags || [])
+    .map((tagId) => tagList.find((tag) => tag.id === tagId))
+    .filter((tag): tag is typeof tagList[0] => !!tag)
+    .sort(sortByProp('label'))
+    .map((tag) => tag.label);
 
   const {
     path,
@@ -131,6 +141,18 @@ function EpisodeSummary(props: EpisodeSummaryProps) {
           <QualityProfileName qualityProfileId={qualityProfileId} />
         </Label>
       </div>
+
+      {sceneTags.length > 0 && (
+        <div>
+          <span className={styles.infoTitle}>{translate('Tags')}</span>
+
+          {sceneTags.map((tag) => (
+            <Label key={tag} kind={kinds.INFO} size={sizes.MEDIUM}>
+              {tag}
+            </Label>
+          ))}
+        </div>
+      )}
 
       <div className={styles.overview}>
         {hasOverview ? overview : translate('NoEpisodeOverview')}
