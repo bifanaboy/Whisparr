@@ -27,7 +27,7 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
         {
             _logger.Debug("Checking if release meets air date restrictions: {0}", subject);
 
-            var releaseProfiles = _releaseProfileService.EnabledForTags(subject.Series.Tags, subject.Release.IndexerId);
+            var releaseProfiles = _releaseProfileService.EnabledForTags(subject.GetAllTags(), subject.Release.IndexerId);
 
             if (releaseProfiles.Empty())
             {

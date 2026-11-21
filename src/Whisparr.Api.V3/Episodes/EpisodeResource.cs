@@ -28,6 +28,7 @@ namespace Whisparr.Api.V3.Episodes
         public string SeriesTitle { get; set; }
         public SeriesResource Series { get; set; }
         public List<Actor> Actors { get; set; }
+        public HashSet<int> Tags { get; set; }
 
         public List<MediaCover> Images { get; set; }
 
@@ -58,6 +59,7 @@ namespace Whisparr.Api.V3.Episodes
                 Runtime = model.Runtime,
                 Overview = model.Overview,
                 Actors = model.Actors,
+                Tags = model.Tags ?? new HashSet<int>(),
                 LastSearchTime = model.LastSearchTime,
 
                 // EpisodeFile

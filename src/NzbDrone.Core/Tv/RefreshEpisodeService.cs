@@ -4,6 +4,7 @@ using System.Linq;
 using NLog;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Messaging.Events;
+using NzbDrone.Core.Tags;
 using NzbDrone.Core.Tv.Events;
 
 namespace NzbDrone.Core.Tv
@@ -16,12 +17,14 @@ namespace NzbDrone.Core.Tv
     public class RefreshEpisodeService : IRefreshEpisodeService
     {
         private readonly IEpisodeService _episodeService;
+        private readonly ITagService _tagService;
         private readonly IEventAggregator _eventAggregator;
         private readonly Logger _logger;
 
-        public RefreshEpisodeService(IEpisodeService episodeService, IEventAggregator eventAggregator, Logger logger)
+        public RefreshEpisodeService(IEpisodeService episodeService, ITagService tagService, IEventAggregator eventAggregator, Logger logger)
         {
             _episodeService = episodeService;
+            _tagService = tagService;
             _eventAggregator = eventAggregator;
             _logger = logger;
         }
@@ -41,6 +44,8 @@ namespace NzbDrone.Core.Tv
             var dupeFreeRemoteEpisodes = remoteEpisodes.DistinctBy(m => new { m.SeasonNumber, m.AirDate, m.Title }).ToList();
             var remoteIds = dupeFreeRemoteEpisodes.Where(e => e.TvdbId > 0).Select(e => e.TvdbId).ToHashSet();
             var remoteTitles = dupeFreeRemoteEpisodes.Select(GetTitleKey).ToHashSet();
+            var existingTags = _tagService.All() ?? new List<Tag>();
+            var tagCache = existingTags.ToDictionary(t => t.Label, t => t, StringComparer.OrdinalIgnoreCase);
 
             foreach (var episode in OrderEpisodes(series, dupeFreeRemoteEpisodes))
             {
@@ -74,6 +79,27 @@ namespace NzbDrone.Core.Tv
                     episodeToUpdate.Ratings = episode.Ratings;
                     episodeToUpdate.Images = episode.Images;
 
+                    var tagIds = new HashSet<int>();
+                    if (episode.Genres != null && episode.Genres.Any())
+                    {
+                        foreach (var genre in episode.Genres)
+                        {
+                            if (genre.IsNotNullOrWhiteSpace())
+                            {
+                                var cleanGenre = genre.Trim().ToLowerInvariant();
+                                if (!tagCache.TryGetValue(cleanGenre, out var tag))
+                                {
+                                    tag = _tagService.Add(new Tag { Label = cleanGenre });
+                                    tagCache[cleanGenre] = tag;
+                                }
+
+                                tagIds.Add(tag.Id);
+                            }
+                        }
+                    }
+
+                    episodeToUpdate.Tags = tagIds;
+
                     successCount++;
                 }
                 catch (Exception e)
@@ -92,6 +118,8 @@ namespace NzbDrone.Core.Tv
             _episodeService.DeleteMany(existingEpisodes);
             _episodeService.UpdateMany(updateList);
             _episodeService.InsertMany(newList);
+
+            _tagService.CleanupOrphanTags();
 
             _eventAggregator.PublishEvent(new EpisodeInfoRefreshedEvent(series, newList, updateList, existingEpisodes));
 

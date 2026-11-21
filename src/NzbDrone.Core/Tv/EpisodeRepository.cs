@@ -29,6 +29,7 @@ namespace NzbDrone.Core.Tv
         void SetMonitored(IEnumerable<int> ids, bool monitored);
         void SetFileId(Episode episode, int fileId);
         void ClearFileId(Episode episode, bool unmonitor);
+        Dictionary<int, List<int>> AllEpisodeTags();
     }
 
     public class EpisodeRepository : BasicRepository<Episode>, IEpisodeRepository
@@ -270,6 +271,15 @@ namespace NzbDrone.Core.Tv
             // Conservative approach: reject ambiguous matches without scene title context
             _logger.Warn("Multiple episodes with the same air date found, cannot determine correct episode without scene title context. Date: {0}, Episodes: {1}. Returning null to prevent incorrect match.", date, regularEpisodes.Count);
             return null;
+        }
+
+        public Dictionary<int, List<int>> AllEpisodeTags()
+        {
+            using (var conn = _database.OpenConnection())
+            {
+                var strSql = "SELECT \"Id\" AS Key, \"Tags\" AS Value FROM \"Episodes\" WHERE \"Tags\" IS NOT NULL";
+                return conn.Query<KeyValuePair<int, List<int>>>(strSql).ToDictionary(x => x.Key, x => x.Value);
+            }
         }
     }
 }

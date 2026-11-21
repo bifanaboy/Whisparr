@@ -86,7 +86,7 @@ namespace NzbDrone.Core.DecisionEngine
         {
             var result = CompareBy(x.RemoteEpisode, y.RemoteEpisode, remoteEpisode =>
             {
-                var delayProfile = _delayProfileService.BestForTags(remoteEpisode.Series.Tags);
+                var delayProfile = _delayProfileService.BestForTags(remoteEpisode.GetAllTags());
                 var downloadProtocol = remoteEpisode.Release.DownloadProtocol;
                 return downloadProtocol == delayProfile.PreferredProtocol;
             });

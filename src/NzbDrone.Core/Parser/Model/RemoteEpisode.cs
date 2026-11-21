@@ -38,6 +38,24 @@ namespace NzbDrone.Core.Parser.Model
             return Episodes.Any(e => e.AirDateUtc >= DateTime.UtcNow.Date.AddDays(-14));
         }
 
+        public HashSet<int> GetAllTags()
+        {
+            var tags = new HashSet<int>(Series?.Tags ?? Enumerable.Empty<int>());
+
+            if (Episodes != null)
+            {
+                foreach (var ep in Episodes)
+                {
+                    if (ep?.Tags != null)
+                    {
+                        tags.UnionWith(ep.Tags);
+                    }
+                }
+            }
+
+            return tags;
+        }
+
         public override string ToString()
         {
             return Release.Title;

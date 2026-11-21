@@ -299,6 +299,16 @@ namespace NzbDrone.Core.Extras.Metadata.Consumers.Xbmc
                         }
                     }
 
+                    // Add scene tags for Stash compatibility
+                    if (episode.Tags != null && episode.Tags.Any())
+                    {
+                        var tags = _tagRepo.Get(episode.Tags);
+                        foreach (var tag in tags)
+                        {
+                            details.Add(new XElement("tag", tag.Label));
+                        }
+                    }
+
                     if (episodeFile.MediaInfo != null)
                     {
                         var sceneName = episodeFile.GetSceneOrFileName();
