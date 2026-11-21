@@ -91,6 +91,7 @@ interface Series extends ModelBase {
   statistics?: Statistics;
   status: SeriesStatus;
   tags: number[];
+  monitoredTagIds: number[];
   title: string;
   titleSlug: string;
   tvdbId: number;

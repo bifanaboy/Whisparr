@@ -17,6 +17,7 @@ namespace NzbDrone.Core.Tags
         public List<int> IndexerIds { get; set; }
         public List<int> AutoTagIds { get; set; }
         public List<int> DownloadClientIds { get; set; }
+        public List<int> MonitoringStudioIds { get; set; }
 
         public bool InUse => SeriesIds.Any() ||
                              EpisodeIds.Any() ||
@@ -27,6 +28,7 @@ namespace NzbDrone.Core.Tags
                              ImportListIds.Any() ||
                              IndexerIds.Any() ||
                              AutoTagIds.Any() ||
-                             DownloadClientIds.Any();
+                             DownloadClientIds.Any() ||
+                             MonitoringStudioIds.Any();
     }
 }

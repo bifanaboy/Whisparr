@@ -96,8 +96,12 @@ namespace Whisparr.Api.V3.Series
                     }
                 }
 
-                var validationResult = _seriesEditorValidator.Validate(series);
+                if (resource.MonitoredTagIds != null)
+                {
+                    series.MonitoredTagIds = new HashSet<int>(resource.MonitoredTagIds);
+                }
 
+                var validationResult = _seriesEditorValidator.Validate(series);
                 if (!validationResult.IsValid)
                 {
                     throw new ValidationException(validationResult.Errors);

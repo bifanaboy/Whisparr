@@ -11,8 +11,8 @@ namespace Whisparr.Api.V3.Series
         public MonitoringOptions MonitoringOptions { get; set; }
         public int? QualityProfileId { get; set; }
         public SeriesTypes? SeriesType { get; set; }
-        public string RootFolderPath { get; set; }
         public List<int> Tags { get; set; }
+        public List<int> MonitoredTagIds { get; set; }
         public ApplyTags ApplyTags { get; set; }
         public bool MoveFiles { get; set; }
         public bool DeleteFiles { get; set; }

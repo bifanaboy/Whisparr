@@ -51,6 +51,7 @@ function EditSeriesModalContent({
     seriesType,
     path,
     tags,
+    monitoredTagIds,
   } = useSeries(seriesId)!;
   const { isSaving, saveError, pendingChanges } = useSelector(
     (state: AppState) => state.series
@@ -72,6 +73,7 @@ function EditSeriesModalContent({
         seriesType,
         path,
         tags,
+        monitoredTagIds,
       },
       pendingChanges,
       saveError
@@ -84,6 +86,7 @@ function EditSeriesModalContent({
     seriesType,
     path,
     tags,
+    monitoredTagIds,
     pendingChanges,
     saveError,
   ]);
@@ -108,7 +111,8 @@ function EditSeriesModalContent({
 
       dispatch(
         saveSeries({
-          id: seriesId,
+          seriesId,
+          pendingChanges,
           moveFiles: false,
         })
       );
@@ -116,18 +120,25 @@ function EditSeriesModalContent({
   }, [seriesId, isPathChanging, isConfirmMoveModalOpen, dispatch]);
 
   const handleMoveSeriesPress = useCallback(() => {
-    setIsConfirmMoveModalOpen(false);
-
     dispatch(
       saveSeries({
-        id: seriesId,
-        moveFiles: true,
+        seriesId,
+        pendingChanges,
+        moveFiles: isPathChanging,
       })
     );
   }, [seriesId, dispatch]);
 
   useEffect(() => {
-    if (!isSaving && wasSaving && !saveError) {
+    if (!wasSaving && isSaving) {
+      return;
+    }
+
+    if (wasSaving && !isSaving) {
+      if (saveError) {
+        return;
+      }
+
       onModalClose();
     }
   }, [isSaving, wasSaving, saveError, onModalClose]);
@@ -224,6 +235,18 @@ function EditSeriesModalContent({
               type={inputTypes.TAG}
               name="tags"
               {...settings.tags}
+              onChange={handleInputChange}
+            />
+          </FormGroup>
+
+          <FormGroup size={sizes.MEDIUM}>
+            <FormLabel>{translate('MonitoredTags')}</FormLabel>
+
+            <FormInputGroup
+              type={inputTypes.TAG}
+              name="monitoredTagIds"
+              helpText={translate('MonitoredTagsHelpText')}
+              {...settings.monitoredTagIds}
               onChange={handleInputChange}
             />
           </FormGroup>

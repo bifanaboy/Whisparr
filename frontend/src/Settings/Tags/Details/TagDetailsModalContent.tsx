@@ -66,6 +66,7 @@ export interface TagDetailsModalContentProps {
   downloadClientIds: number[];
   autoTagIds: number[];
   seriesIds: number[];
+  monitoringStudioIds: number[];
   onModalClose: () => void;
   onDeleteTagPress: () => void;
 }
@@ -81,6 +82,7 @@ function TagDetailsModalContent({
   downloadClientIds = [],
   autoTagIds = [],
   seriesIds = [],
+  monitoringStudioIds = [],
   onModalClose,
   onDeleteTagPress,
 }: TagDetailsModalContentProps) {
@@ -150,6 +152,14 @@ function TagDetailsModalContent({
           </FieldSet>
         ) : null}
 
+        {monitoringStudioIds.length ? (
+          <FieldSet legend={translate('MonitoringStudios')}>
+            {monitoringStudioIds.map((id) => {
+              const studio = series.find((s) => s.id === id);
+              return studio ? <div key={studio.id}>{studio.title}</div> : null;
+            })}
+          </FieldSet>
+        ) : null}
         {delayProfiles.length ? (
           <FieldSet legend={translate('DelayProfile')}>
             {delayProfiles.map((item) => {

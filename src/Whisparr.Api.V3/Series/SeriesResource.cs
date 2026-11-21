@@ -52,12 +52,10 @@ namespace Whisparr.Api.V3.Series
         public string TitleSlug { get; set; }
         public string RootFolderPath { get; set; }
         public string Folder { get; set; }
-        public string Certification { get; set; }
         public List<string> Genres { get; set; }
         public HashSet<int> Tags { get; set; }
+        public HashSet<int> MonitoredTagIds { get; set; }
         public DateTime Added { get; set; }
-        public AddSeriesOptions AddOptions { get; set; }
-        public Ratings Ratings { get; set; }
 
         public SeriesStatisticsResource Statistics { get; set; }
 
@@ -118,8 +116,8 @@ namespace Whisparr.Api.V3.Series
                        Certification = model.Certification,
                        Genres = model.Genres,
                        Tags = model.Tags,
+                       MonitoredTagIds = model.MonitoredTagIds,
                        Added = model.Added,
-                       AddOptions = model.AddOptions,
                        Ratings = model.Ratings
                    };
         }
@@ -173,6 +171,7 @@ namespace Whisparr.Api.V3.Series
                        Certification = resource.Certification,
                        Genres = resource.Genres,
                        Tags = resource.Tags,
+                       MonitoredTagIds = resource.MonitoredTagIds,
                        Added = resource.Added,
                        AddOptions = resource.AddOptions,
                        Ratings = resource.Ratings
