@@ -48,8 +48,8 @@ namespace NzbDrone.Core.Tv
 
         public List<Season> Seasons { get; set; }
         public HashSet<int> Tags { get; set; }
+        public HashSet<int> MonitoredTagIds { get; set; }
         public AddSeriesOptions AddOptions { get; set; }
-
         public override string ToString()
         {
             return string.Format("[{0}][{1}]", TvdbId, Title.NullSafe());
@@ -69,6 +69,7 @@ namespace NzbDrone.Core.Tv
 
             RootFolderPath = otherSeries.RootFolderPath;
             Tags = otherSeries.Tags;
+            MonitoredTagIds = otherSeries.MonitoredTagIds;
             AddOptions = otherSeries.AddOptions;
         }
     }

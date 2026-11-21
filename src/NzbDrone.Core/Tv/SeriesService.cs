@@ -26,6 +26,7 @@ namespace NzbDrone.Core.Tv
         List<int> AllSeriesTvdbIds();
         Dictionary<int, string> GetAllSeriesPaths();
         Dictionary<int, List<int>> GetAllSeriesTags();
+        HashSet<int> GetMonitoredTagIds(int seriesId);
         List<Series> AllForTag(int tagId);
         Dictionary<int, int> GetAllSeriesQualityProfiles();
         Series UpdateSeries(Series series, bool updateEpisodesToMatchSeason = true, bool publishUpdatedEvent = true);
@@ -42,6 +43,7 @@ namespace NzbDrone.Core.Tv
         private readonly IEpisodeService _episodeService;
         private readonly IBuildSeriesPaths _seriesPathBuilder;
         private readonly IAutoTaggingService _autoTaggingService;
+        private readonly IStudioTagMonitoringRepository _studioTagMonitoringRepository;
         private readonly Logger _logger;
 
         public SeriesService(ISeriesRepository seriesRepository,
@@ -49,6 +51,7 @@ namespace NzbDrone.Core.Tv
                              IEpisodeService episodeService,
                              IBuildSeriesPaths seriesPathBuilder,
                              IAutoTaggingService autoTaggingService,
+                             IStudioTagMonitoringRepository studioTagMonitoringRepository,
                              Logger logger)
         {
             _seriesRepository = seriesRepository;
@@ -56,6 +59,7 @@ namespace NzbDrone.Core.Tv
             _episodeService = episodeService;
             _seriesPathBuilder = seriesPathBuilder;
             _autoTaggingService = autoTaggingService;
+            _studioTagMonitoringRepository = studioTagMonitoringRepository;
             _logger = logger;
         }
 
@@ -158,6 +162,11 @@ namespace NzbDrone.Core.Tv
         {
             var series = _seriesRepository.Get(seriesIds).ToList();
             _seriesRepository.DeleteMany(seriesIds);
+            // Cascade delete StudioTagMonitoring entries
+            foreach (var id in seriesIds)
+            {
+                _studioTagMonitoringRepository.DeleteByStudio(id);
+            }
             _eventAggregator.PublishEvent(new SeriesDeletedEvent(series, deleteFiles, addImportListExclusion));
         }
 
@@ -179,6 +188,12 @@ namespace NzbDrone.Core.Tv
         public Dictionary<int, List<int>> GetAllSeriesTags()
         {
             return _seriesRepository.AllSeriesTags();
+        }
+
+        public HashSet<int> GetMonitoredTagIds(int seriesId)
+        {
+            var monitoring = _studioTagMonitoringRepository.GetByStudio(seriesId);
+            return monitoring.Select(m => m.TagId).ToHashSet();
         }
 
         public Dictionary<int, int> GetAllSeriesQualityProfiles()

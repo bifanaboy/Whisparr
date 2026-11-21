@@ -27,6 +27,7 @@ function Tag({ id, label }: TagProps) {
     downloadClientIds = [],
     autoTagIds = [],
     seriesIds = [],
+    monitoringStudioIds = [],
   } = useSelector(createTagDetailsSelector(id)) ?? {};
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isDeleteTagModalOpen, setIsDeleteTagModalOpen] = useState(false);
@@ -40,7 +41,8 @@ function Tag({ id, label }: TagProps) {
     indexerIds.length ||
     downloadClientIds.length ||
     autoTagIds.length ||
-    seriesIds.length
+    seriesIds.length ||
+    monitoringStudioIds.length
   );
 
   const mergedReleaseProfileIds = Array.from(
@@ -121,8 +123,13 @@ function Tag({ id, label }: TagProps) {
             label={translate('AutoTagging')}
             count={autoTagIds.length}
           />
+
+          <TagInUse
+            label={translate('MonitoringStudios')}
+            count={monitoringStudioIds.length}
+          />
         </div>
-      ) : null}
+      ) : null)
 
       {!isTagUsed && <div>{translate('NoLinks')}</div>}
 
@@ -137,6 +144,7 @@ function Tag({ id, label }: TagProps) {
         indexerIds={indexerIds}
         downloadClientIds={downloadClientIds}
         autoTagIds={autoTagIds}
+        monitoringStudioIds={monitoringStudioIds}
         isOpen={isDetailsModalOpen}
         onModalClose={handeDetailsModalClose}
         onDeleteTagPress={handleDeleteTagPress}

@@ -17,6 +17,7 @@ namespace Whisparr.Api.V3.Tags
         public List<int> DownloadClientIds { get; set; }
         public List<int> AutoTagIds { get; set; }
         public List<int> SeriesIds { get; set; }
+        public List<int> MonitoringStudioIds { get; set; }
     }
 
     public static class TagDetailsResourceMapper
@@ -40,7 +41,8 @@ namespace Whisparr.Api.V3.Tags
                 IndexerIds = model.IndexerIds,
                 DownloadClientIds = model.DownloadClientIds,
                 AutoTagIds = model.AutoTagIds,
-                SeriesIds = model.SeriesIds
+                SeriesIds = model.SeriesIds,
+                MonitoringStudioIds = model.MonitoringStudioIds
             };
         }
 

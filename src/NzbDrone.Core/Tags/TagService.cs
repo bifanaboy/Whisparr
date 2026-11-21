@@ -40,6 +40,7 @@ namespace NzbDrone.Core.Tags
         private readonly IIndexerFactory _indexerService;
         private readonly IAutoTaggingService _autoTaggingService;
         private readonly IDownloadClientFactory _downloadClientFactory;
+        private readonly IStudioTagMonitoringRepository _studioTagMonitoringRepository;
 
         public TagService(ITagRepository repo,
                           IEventAggregator eventAggregator,
@@ -51,7 +52,8 @@ namespace NzbDrone.Core.Tags
                           IEpisodeService episodeService,
                           IIndexerFactory indexerService,
                           IAutoTaggingService autoTaggingService,
-                          IDownloadClientFactory downloadClientFactory)
+                          IDownloadClientFactory downloadClientFactory,
+                          IStudioTagMonitoringRepository studioTagMonitoringRepository)
         {
             _repo = repo;
             _eventAggregator = eventAggregator;
@@ -64,6 +66,7 @@ namespace NzbDrone.Core.Tags
             _indexerService = indexerService;
             _autoTaggingService = autoTaggingService;
             _downloadClientFactory = downloadClientFactory;
+            _studioTagMonitoringRepository = studioTagMonitoringRepository;
         }
 
         public Tag GetTag(int tagId)
@@ -101,6 +104,7 @@ namespace NzbDrone.Core.Tags
             var indexers = _indexerService.AllForTag(tagId);
             var autoTags = _autoTaggingService.AllForTag(tagId);
             var downloadClients = _downloadClientFactory.AllForTag(tagId);
+            var monitoringStudios = _studioTagMonitoringRepository.GetByTag(tagId);
 
             return new TagDetails
             {
@@ -115,7 +119,8 @@ namespace NzbDrone.Core.Tags
                 EpisodeIds = episodes.Where(c => c.Value.Contains(tagId)).Select(c => c.Key).ToList(),
                 IndexerIds = indexers.Select(c => c.Id).ToList(),
                 AutoTagIds = autoTags.Select(c => c.Id).ToList(),
-                DownloadClientIds = downloadClients.Select(c => c.Id).ToList()
+                DownloadClientIds = downloadClients.Select(c => c.Id).ToList(),
+                MonitoringStudioIds = monitoringStudios.Select(c => c.StudioId).ToList()
             };
         }
 
@@ -132,9 +137,12 @@ namespace NzbDrone.Core.Tags
             var indexers = _indexerService.All();
             var autotags = _autoTaggingService.All();
             var downloadClients = _downloadClientFactory.All();
+            var monitoringStudios = _studioTagMonitoringRepository.All();
 
             var episodeLookup = episodes.SelectMany(e => e.Value.Select(t => new { TagId = t, EpisodeId = e.Key }))
                                         .ToLookup(x => x.TagId, x => x.EpisodeId);
+
+            var monitoringStudioLookup = monitoringStudios.ToLookup(c => c.TagId, c => c.StudioId);
 
             var details = new List<TagDetails>();
 
@@ -154,6 +162,7 @@ namespace NzbDrone.Core.Tags
                         IndexerIds = indexers.Where(c => c.Tags.Contains(tag.Id)).Select(c => c.Id).ToList(),
                         AutoTagIds = autotags.Where(c => c.Tags.Contains(tag.Id)).Select(c => c.Id).ToList(),
                         DownloadClientIds = downloadClients.Where(c => c.Tags.Contains(tag.Id)).Select(c => c.Id).ToList(),
+                        MonitoringStudioIds = monitoringStudioLookup[tag.Id].ToList()
                     });
             }
 
@@ -199,6 +208,9 @@ namespace NzbDrone.Core.Tags
             {
                 throw new ModelConflictException(typeof(Tag), tagId, $"'{details.Label}' cannot be deleted since it's still in use");
             }
+
+            // Cascade delete StudioTagMonitoring entries
+            _studioTagMonitoringRepository.DeleteByTag(tagId);
 
             _repo.Delete(tagId);
             _eventAggregator.PublishEvent(new TagsUpdatedEvent());
@@ -252,6 +264,12 @@ namespace NzbDrone.Core.Tags
             foreach (var d in _downloadClientFactory.All())
             {
                 usedTagIds.UnionWith(d.Tags);
+            }
+
+            // StudioTagMonitoring
+            foreach (var s in _studioTagMonitoringRepository.All())
+            {
+                usedTagIds.Add(s.TagId);
             }
 
             var allTags = _repo.All();
